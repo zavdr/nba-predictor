@@ -1,0 +1,18 @@
+/*
+ * NBA-themed dark mode layout for the single-page predictor.
+ * Will define typography, spacing, form controls, and results panel styling.
+ * No external CSS frameworks; pure CSS only.
+ */
+
+/* Placeholder tokens (to be filled in during implementation):
+:root {
+  --bg: ...;
+  --surface: ...;
+  --accent: ...;
+  --text: ...;
+}
+*/
+
+body {
+  margin: 0;
+}

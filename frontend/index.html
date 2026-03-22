@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NBA Predictor</title>
+  <!-- Single-page app: no build step. Links to local CSS/JS only. -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="app__header">
+      <h1>NBA Predictor</h1>
+      <p class="app__subtitle">Select teams and date, then submit for win probability and explanation.</p>
+    </header>
+
+    <section class="form-panel" aria-label="Prediction form">
+      <!-- Home / away team dropdowns and game date will be populated by script.js -->
+      <label for="home-team">Home team</label>
+      <select id="home-team" name="home_team"></select>
+
+      <label for="away-team">Away team</label>
+      <select id="away-team" name="away_team"></select>
+
+      <label for="game-date">Game date</label>
+      <input type="date" id="game-date" name="game_date" />
+
+      <button type="button" id="predict-btn">Predict</button>
+    </section>
+
+    <section class="results" id="results" aria-live="polite" hidden>
+      <!-- script.js will inject predicted winner, probability, and explanation here -->
+      <h2>Result</h2>
+      <div id="results-content"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

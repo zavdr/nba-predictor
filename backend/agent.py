@@ -1,109 +1,60 @@
-import anthropic
 import json
 import os
 from stats import get_team_stats
 from predictor import predict
 
-client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
-
-TOOLS = [
-    {
-        'name': 'get_team_stats',
-        'description': 'Get pregame statistics for an NBA team before a given date. Returns win percentage, last 5 game win rate, average points, and rest days.',
-        'input_schema': {
-            'type': 'object',
-            'properties': {
-                'team': {
-                    'type': 'string',
-                    'description': 'NBA team abbreviation e.g. LAL, BOS, GSW'
-                },
-                'date': {
-                    'type': 'string',
-                    'description': 'Game date in YYYY-MM-DD format'
-                }
-            },
-            'required': ['team', 'date']
-        }
-    },
-    {
-        'name': 'predict_game',
-        'description': 'Run the ML model to predict the winner of a game given home and away team stats.',
-        'input_schema': {
-            'type': 'object',
-            'properties': {
-                'home_stats': {
-                    'type': 'object',
-                    'description': 'Stats dict for the home team from get_team_stats'
-                },
-                'away_stats': {
-                    'type': 'object',
-                    'description': 'Stats dict for the away team from get_team_stats'
-                }
-            },
-            'required': ['home_stats', 'away_stats']
-        }
-    }
-]
-
-
-def run_tool(tool_name: str, tool_input: dict) -> str:
-    if tool_name == 'get_team_stats':
-        result = get_team_stats(tool_input['team'], tool_input['date'])
-        return json.dumps(result)
-    elif tool_name == 'predict_game':
-        result = predict(tool_input['home_stats'], tool_input['away_stats'])
-        return json.dumps(result)
-    return json.dumps({'error': f'Unknown tool: {tool_name}'})
-
 
 def run_agent(home_team: str, away_team: str, game_date: str) -> dict:
-    messages = [
-        {
-            'role': 'user',
-            'content': (
-                f'Predict the NBA game: {home_team} (home) vs {away_team} (away) on {game_date}. '
-                f'Use the tools to: 1) get stats for both teams, 2) run the prediction model, '
-                f'3) return a JSON response with these exact keys: '
-                f'"predicted_winner", "home_win_probability", "away_win_probability", '
-                f'"home_team", "away_team", "explanation". '
-                f'The explanation should be 2-3 sentences in plain English describing '
-                f'why the predicted team is favored, referencing the actual stat values.'
-            )
-        }
-    ]
+    home_stats = get_team_stats(home_team, game_date)
+    away_stats = get_team_stats(away_team, game_date)
 
-    while True:
-        response = client.messages.create(
-            model='claude-sonnet-4-20250514',
-            max_tokens=1000,
-            tools=TOOLS,
-            messages=messages
-        )
+    result = predict(home_stats, away_stats)
 
-        if response.stop_reason == 'tool_use':
-            tool_results = []
-            for block in response.content:
-                if block.type == 'tool_use':
-                    result = run_tool(block.name, block.input)
-                    tool_results.append({
-                        'type':        'tool_result',
-                        'tool_use_id': block.id,
-                        'content':     result
-                    })
+    home_win_prob = result['home_win_probability']
+    away_win_prob = result['away_win_probability']
+    winner = result['predicted_winner']
 
-            messages.append({'role': 'assistant', 'content': response.content})
-            messages.append({'role': 'user',      'content': tool_results})
+    factors = []
 
-        elif response.stop_reason == 'end_turn':
-            for block in response.content:
-                if hasattr(block, 'text'):
-                    text = block.text.strip()
-                    if text.startswith('{'):
-                        return json.loads(text)
-                    start = text.find('{')
-                    end = text.rfind('}') + 1
-                    if start != -1 and end != 0:
-                        return json.loads(text[start:end])
-            break
+    if home_stats['win_pct'] > away_stats['win_pct'] + 0.05:
+        factors.append(
+            f"{home_team} has a better season record ({home_stats['win_pct']:.0%} vs {away_stats['win_pct']:.0%})")
+    elif away_stats['win_pct'] > home_stats['win_pct'] + 0.05:
+        factors.append(
+            f"{away_team} has a better season record ({away_stats['win_pct']:.0%} vs {home_stats['win_pct']:.0%})")
 
-    return {'error': 'Agent did not return a valid prediction'}
+    if home_stats['last5_win'] > away_stats['last5_win'] + 0.2:
+        factors.append(
+            f"{home_team} is in better recent form ({home_stats['last5_win']:.0%} vs {away_stats['last5_win']:.0%} last 5)")
+    elif away_stats['last5_win'] > home_stats['last5_win'] + 0.2:
+        factors.append(
+            f"{away_team} is in better recent form ({away_stats['last5_win']:.0%} vs {home_stats['last5_win']:.0%} last 5)")
+
+    if home_stats['rest_days'] > away_stats['rest_days'] + 1:
+        factors.append(
+            f"{home_team} has more rest ({home_stats['rest_days']} days vs {away_stats['rest_days']})")
+    elif away_stats['rest_days'] > home_stats['rest_days'] + 1:
+        factors.append(
+            f"{away_team} has more rest ({away_stats['rest_days']} days vs {home_stats['rest_days']})")
+
+    if home_stats['avg_pts'] > away_stats['avg_pts'] + 3:
+        factors.append(
+            f"{home_team} scores more on average ({home_stats['avg_pts']:.1f} vs {away_stats['avg_pts']:.1f} ppg)")
+    elif away_stats['avg_pts'] > home_stats['avg_pts'] + 3:
+        factors.append(
+            f"{away_team} scores more on average ({away_stats['avg_pts']:.1f} vs {home_stats['avg_pts']:.1f} ppg)")
+
+    if not factors:
+        factors.append("Teams are evenly matched — close game expected")
+
+    explanation = f"{winner} is predicted to win with {max(home_win_prob, away_win_prob):.1f}% probability. " + " ".join(
+        factors) + "."
+
+    return {
+        'predicted_winner':      winner,
+        'home_win_probability':  home_win_prob,
+        'away_win_probability':  away_win_prob,
+        'home_team':             home_team,
+        'away_team':             away_team,
+        'explanation':           explanation
+    }

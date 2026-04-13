@@ -4,10 +4,19 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_PATH = os.path.join(BASE_DIR, 'data', 'full_dataset.csv')
 
-df = pd.read_csv(DATA_PATH)
-df['GAME_DATE'] = pd.to_datetime(df['GAME_DATE'])
+df = pd.DataFrame()
+ALL_TEAMS = []
 
-ALL_TEAMS = sorted(set(df['HOME'].unique()) | set(df['AWAY'].unique()))
+
+def refresh_dataset() -> None:
+    global df, ALL_TEAMS
+
+    df = pd.read_csv(DATA_PATH)
+    df['GAME_DATE'] = pd.to_datetime(df['GAME_DATE'])
+    ALL_TEAMS = sorted(set(df['HOME'].unique()) | set(df['AWAY'].unique()))
+
+
+refresh_dataset()
 
 
 def get_team_stats(team: str, date: str) -> dict:

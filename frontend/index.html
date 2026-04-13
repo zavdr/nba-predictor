@@ -11,27 +11,53 @@
   <main class="app">
     <header class="app__header">
       <h1>NBA Predictor</h1>
-      <p class="app__subtitle">Select teams and date, then submit for win probability and explanation.</p>
+      <p class="app__subtitle">Pick a matchup and date to get a predicted winner, win probabilities, and a quick explanation.</p>
     </header>
 
-    <section class="form-panel" aria-label="Prediction form">
-      <!-- Home / away team dropdowns and game date will be populated by script.js -->
-      <label for="home-team">Home team</label>
-      <select id="home-team" name="home_team"></select>
+    <section class="panel" aria-label="Prediction form">
+      <form class="form-panel" id="prediction-form">
+        <label for="home-team">Home team</label>
+        <select id="home-team" name="home_team" required>
+          <option value="">Loading teams...</option>
+        </select>
 
-      <label for="away-team">Away team</label>
-      <select id="away-team" name="away_team"></select>
+        <label for="away-team">Away team</label>
+        <select id="away-team" name="away_team" required>
+          <option value="">Loading teams...</option>
+        </select>
 
-      <label for="game-date">Game date</label>
-      <input type="date" id="game-date" name="game_date" />
+        <label for="game-date">Game date</label>
+        <input type="date" id="game-date" name="game_date" required />
 
-      <button type="button" id="predict-btn">Predict</button>
+        <button type="submit" id="predict-btn">Predict Game</button>
+      </form>
+
+      <p class="status-message" id="status-message" aria-live="polite"></p>
     </section>
 
-    <section class="results" id="results" aria-live="polite" hidden>
-      <!-- script.js will inject predicted winner, probability, and explanation here -->
-      <h2>Result</h2>
-      <div id="results-content"></div>
+    <section class="panel results" id="results" aria-live="polite" hidden>
+      <h2>Prediction</h2>
+      <div class="result-grid">
+        <article class="result-card result-card--winner">
+          <h3>Predicted Winner</h3>
+          <p class="winner" id="winner-name">-</p>
+        </article>
+
+        <article class="result-card">
+          <h3>Home Win Probability</h3>
+          <p class="stat" id="home-probability">-</p>
+        </article>
+
+        <article class="result-card">
+          <h3>Away Win Probability</h3>
+          <p class="stat" id="away-probability">-</p>
+        </article>
+      </div>
+
+      <article class="result-card result-card--full">
+        <h3>Explanation</h3>
+        <p class="explanation" id="explanation-text">-</p>
+      </article>
     </section>
   </main>
 

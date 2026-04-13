@@ -17,6 +17,9 @@ def refresh_prediction_data() -> None:
     appended_rows = append_latest_games_to_dataset()
     if not appended_rows.empty:
         refresh_dataset()
+        app.logger.info('Dataset refreshed with %s new games.', len(appended_rows))
+    else:
+        app.logger.info('Dataset already up to date; no new games appended.')
 
 
 @app.route('/teams', methods=['GET'])
